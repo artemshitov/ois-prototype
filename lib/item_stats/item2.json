@@ -3,8 +3,13 @@
         "title": "Маркировка Честный знак для маркетплейсов под ключ",
         "price": "1 ₽",
         "id": "7849962741",
-        "location": "Санкт-Петербург, Адмиралтейская",
-        "imageUrl": "https://10.img.avito.st/image/1/1.0pmYora5fnCuC7x1sPWiz9ADfHYoA_x47gZ8dCQLdHI.KUKtrYwR3mCOr-0Ti2Y0adF74ICReItCr7Zlxg2HcjM?cqp=2.eRT6-xlaFqpytx29lyPOB0KGgvHTpkCy3N43Rbj69sFRkwQsec1XkkvmKfXp"
+        "location": "Санкт-Петербург",
+        "metro": { "name": "Адмиралтейская", "color": "#800080" },
+        "imageUrl": "https://10.img.avito.st/image/1/1.0pmYora5fnCuC7x1sPWiz9ADfHYoA_x47gZ8dCQLdHI.KUKtrYwR3mCOr-0Ti2Y0adF74ICReItCr7Zlxg2HcjM?cqp=2.eRT6-xlaFqpytx29lyPOB0KGgvHTpkCy3N43Rbj69sFRkwQsec1XkkvmKfXp",
+        "buttons": [
+            { "label": "Поднять просмотры", "variant": "primary" },
+            { "label": "Редактировать", "variant": "secondary" }
+        ]
     },
     "dates": [
         {

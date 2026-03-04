@@ -70,11 +70,13 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
   const rows: Row[] = []
   for (const [name, group] of rowMap) {
     const sorted = [...group].sort((a, b) => a.startTime - b.startTime)
-    const segments: Segment[] = sorted.map((v, i) => {
-      const leftPct      = toPct(v.startTime)
-      const rightPct     = toPct(v.endTime)
-      const stitchedLeft  = i > 0 && sorted[i - 1].endTime === v.startTime
-      const stitchedRight = i < sorted.length - 1 && v.endTime === sorted[i + 1].startTime
+    const visible = sorted.filter(v => v.endTime > windowStart && v.startTime < windowEnd)
+    if (!visible.length) continue
+    const segments: Segment[] = visible.map((v, i) => {
+      const leftPct  = toPct(v.startTime)
+      const rightPct = toPct(v.endTime)
+      const stitchedLeft  = i > 0 && visible[i - 1].endTime === v.startTime
+      const stitchedRight = i < visible.length - 1 && v.endTime === visible[i + 1].startTime
       return {
         leftPct,
         widthPct: rightPct - leftPct,
@@ -107,11 +109,9 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
           <div style={{ position: 'relative', width: '100%', height: ROW_H }}>
             {row.segments.map((seg, si) => {
               const GAP = 2
-              const minWidthPct = 18 / BARS_W
               const gapPct    = GAP / BARS_W
               const leftPct   = seg.leftPct  + (seg.stitchedLeft  ? gapPct : 0)
-              const rawWidthPct = seg.widthPct - (seg.stitchedLeft ? gapPct : 0)
-              const widthPct  = !seg.stitchedRight ? Math.max(rawWidthPct, minWidthPct) : rawWidthPct
+              const widthPct  = seg.widthPct - (seg.stitchedLeft  ? gapPct : 0) - (seg.stitchedRight ? gapPct : 0)
               const widthPx   = widthPct * BARS_W
               const showPrice = seg.price > 0 && widthPx > (seg.showIcon ? 40 : 28)
               const rL = seg.stitchedLeft  ? 4 : 10

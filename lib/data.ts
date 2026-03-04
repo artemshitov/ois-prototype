@@ -82,9 +82,11 @@ export interface RawItemData {
     price: string
     id: string
     location: string
+    metro?: { name: string; color: string }
     imageUrl: string
     status?: ListingStatus
     bannerStyle?: 'badge' | 'heading'
+    buttons?: Array<{ label: string; variant: 'primary' | 'secondary' }>
     rejectionReason?: RejectionReason
   }
   dates: RawDateEntry[]

@@ -3,8 +3,13 @@
         "title": "Маркировка Честный знак киз для селлеров",
         "price": "1 ₽",
         "id": "7882880036",
-        "location": "Москва, Пушкинская",
-        "imageUrl": "https://80.img.avito.st/image/1/1.mPXa4La5NBzsSfYZ5vKylpFBNhpqQbYUrEQ2GGZJPh4.Z3dMDuVnDNNTJm20tyWscsZv-3rxH18ONU4X2qwSPF4"
+        "location": "Москва",
+        "metro": { "name": "Пушкинская", "color": "#800080" },
+        "imageUrl": "https://80.img.avito.st/image/1/1.mPXa4La5NBzsSfYZ5vKylpFBNhpqQbYUrEQ2GGZJPh4.Z3dMDuVnDNNTJm20tyWscsZv-3rxH18ONU4X2qwSPF4",
+        "buttons": [
+            { "label": "Поднять просмотры", "variant": "primary" },
+            { "label": "Редактировать", "variant": "secondary" }
+        ]
     },
     "dates": [
         {
@@ -9778,7 +9783,7 @@
                 "small": "https://avito.st/static/ims/6ba093ad-c4a4-4287-bcea-6a820b9112f1_cpx_promo_common.svg"
             },
             "name": "Настройка цены просмотра",
-            "price": 0,
+            "price": 54,
             "slug": "",
             "startTime": 1766137745,
             "type": "vas"
@@ -9832,7 +9837,7 @@
                 "small": "https://avito.st/static/ims/6ba093ad-c4a4-4287-bcea-6a820b9112f1_cpx_promo_common.svg"
             },
             "name": "Настройка цены просмотра",
-            "price": 0,
+            "price": 76,
             "slug": "",
             "startTime": 1771331246,
             "subtitle": "171 ₽",
