@@ -193,20 +193,19 @@ function parseLocalDate(iso: string): Date {
   return new Date(y, m - 1, d)
 }
 
-/** Group daily entries into Mon–Sun weeks, summing numeric fields. */
+/** Group daily entries into 7-day chunks starting from the last day, discarding incomplete remainder. */
 export function aggregateWeekly(data: DailyEntry[], startDates: string[]): { data: DailyEntry[]; weeks: WeekInfo[] } {
-  const groups: number[][] = []
-  let current: number[] = []
+  const total = data.length
+  const fullWeeks = Math.floor(total / 7)
+  const skip = total - fullWeeks * 7 // discard incomplete days at the start
 
-  for (let i = 0; i < data.length; i++) {
-    const dow = parseLocalDate(startDates[i]).getDay() // 0=Sun
-    if (dow === 1 && current.length > 0) {
-      groups.push(current)
-      current = []
-    }
-    current.push(i)
+  const groups: number[][] = []
+  for (let w = 0; w < fullWeeks; w++) {
+    const start = skip + w * 7
+    const indices: number[] = []
+    for (let d = 0; d < 7; d++) indices.push(start + d)
+    groups.push(indices)
   }
-  if (current.length > 0) groups.push(current)
 
   const aggregated: DailyEntry[] = groups.map(indices => {
     const entries = indices.map(i => data[i])
@@ -300,7 +299,7 @@ export const CHARTS: ChartConfig[] = [
     data: showsData,
     yMax: 992,
     keys: ['g', 'b'],
-    labels: { g: 'С продвижением', b: 'Органические' },
+    labels: { g: 'Показы с продвижением', b: 'Показы без продвижения' },
     unit: '',
   },
   {
@@ -308,7 +307,7 @@ export const CHARTS: ChartConfig[] = [
     data: viewsData,
     yMax: 96,
     keys: ['g', 'b'],
-    labels: { g: 'С продвижением', b: 'Органические' },
+    labels: { g: 'Просмотры с продвижением', b: 'Просмотры без продвижения' },
     unit: '',
   },
   {
@@ -342,7 +341,7 @@ export function buildCharts(data: DailyEntry[]): ChartConfig[] {
       id: 'shows',
       yMax: maxImp,
       keys: ['g', 'b'],
-      labels: { g: 'С продвижением', b: 'Органические' },
+      labels: { g: 'Показы с продвижением', b: 'Показы без продвижения' },
       unit: '',
       data: data.map(d => ({
         h: norm(d.impressions, maxImp),
@@ -354,7 +353,7 @@ export function buildCharts(data: DailyEntry[]): ChartConfig[] {
       id: 'views',
       yMax: maxViews,
       keys: ['g', 'b'],
-      labels: { g: 'С продвижением', b: 'Органические' },
+      labels: { g: 'Просмотры с продвижением', b: 'Просмотры без продвижения' },
       unit: '',
       data: data.map(d => ({
         h: norm(d.views, maxViews),

@@ -69,7 +69,7 @@ function ScoreCircle({ percent }: { percent: number }) {
   return (
     <div className="rpt-card-score">
       <svg width="64" height="64" viewBox="0 0 64 64">
-        <circle cx="32" cy="32" r={r} fill="none" stroke="#ebeae8" strokeWidth="5" />
+        <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="5" />
         <circle
           cx="32" cy="32" r={r}
           fill="none"
@@ -150,7 +150,7 @@ export default function ReportTab() {
       {/* Unified hero + funnel card */}
       <div className="rpt-unified-card">
 
-        {/* Zone A: score summary */}
+        {/* Hero */}
         <div className="rpt-card-hero">
           <div className="rpt-card-hero-left">
             <ScoreCircle percent={data.scorePercent} />
@@ -170,10 +170,7 @@ export default function ReportTab() {
           </div>
         </div>
 
-        {/* Separator */}
-        <div className="rpt-card-sep" />
-
-        {/* Zone B: funnel stages */}
+        {/* Funnel stages */}
         <div className="rpt-card-funnel">
           {data.stages.map((stage, i) => {
             const col = data.columns.find(c => c.id === stage.id)
@@ -185,22 +182,23 @@ export default function ReportTab() {
 
             return (
               <Fragment key={stage.id}>
-                <div className={`rpt-card-stage${badge ? ` rpt-card-stage-${badge.type}` : ''}`}>
+                <div className="rpt-card-stage">
                   <div className="rpt-card-stage-num">{formatNum(stage.count)}</div>
                   <div className="rpt-card-stage-label">{stage.countLabel}</div>
                   {badge && (
-                    <div className="rpt-card-stage-badge">
-                      <Badge badge={badge} />
+                    <div className="rpt-card-stage-status">
+                      <span className={`rpt-card-stage-dot rpt-card-stage-dot-${badge.type}`} />
+                      <span className="rpt-card-stage-status-text">{badge.label}</span>
                     </div>
                   )}
                 </div>
                 {!isLast && stage.rateToNext != null && (
-                  <div className={`rpt-card-arrow${rateWarn ? ' rpt-card-arrow-warn' : ''}`}>
-                    <span className="rpt-card-arrow-rate">
+                  <div className={`rpt-card-connector${rateWarn ? ' rpt-card-connector-warn' : ''}`}>
+                    <span className="rpt-card-connector-rate">
                       {stage.rateToNext.toFixed(1).replace('.', ',')}%
                     </span>
-                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                      <path d="M8 5L13 10L8 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                      <path d="M5 3L9 7L5 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 )}
