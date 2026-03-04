@@ -69,6 +69,13 @@ export interface RawVas {
   type: string
 }
 
+export type ListingStatus = 'active' | 'blocked' | 'rejected' | 'archived' | 'deleted' | 'pending'
+
+export interface RejectionReason {
+  title: string
+  body: string
+}
+
 export interface RawItemData {
   listing: {
     title: string
@@ -76,6 +83,9 @@ export interface RawItemData {
     id: string
     location: string
     imageUrl: string
+    status?: ListingStatus
+    bannerStyle?: 'badge' | 'heading'
+    rejectionReason?: RejectionReason
   }
   dates: RawDateEntry[]
   metrics: RawMetric[]
