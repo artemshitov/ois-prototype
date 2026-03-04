@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { formatNum } from '@/lib/utils'
 
 interface VasEntry {
@@ -53,7 +54,8 @@ function formatTs(ts: number): string {
 }
 
 export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
-  const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number; hovered: VasEntry } | null>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [tooltipAnchor, setTooltipAnchor] = useState<{ x: number; y: number; ts: number; hoveredVas: VasEntry } | null>(null)
 
   if (!vases.length) return null
 
@@ -91,12 +93,12 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
 
   const activeVasList = tooltipAnchor
     ? [...vases]
-        .filter(v => v.startTime < tooltipAnchor.hovered.endTime && v.endTime > tooltipAnchor.hovered.startTime)
+        .filter(v => v === tooltipAnchor.hoveredVas || (v.startTime <= tooltipAnchor.ts && v.endTime > tooltipAnchor.ts))
         .sort((a, b) => a.startTime - b.startTime)
     : []
 
   return (
-    <div style={{ position: 'relative', height: totalH }}>
+    <div ref={containerRef} style={{ position: 'relative', height: totalH }}>
       {rows.map((row, ri) => (
         <div
           key={row.name}
@@ -117,9 +119,12 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
               return (
                 <div
                   key={si}
-                  onMouseEnter={(e) => {
+                  onMouseMove={(e) => {
+                    const containerRect = containerRef.current?.getBoundingClientRect()
+                    if (!containerRect) return
+                    const ts = windowStart + (e.clientX - containerRect.left) / containerRect.width * (windowEnd - windowStart)
                     const rect = e.currentTarget.getBoundingClientRect()
-                    setTooltipAnchor({ x: rect.left + rect.width / 2, y: rect.top, hovered: seg.vasEntry })
+                    setTooltipAnchor({ x: e.clientX, y: rect.top, ts, hoveredVas: seg.vasEntry })
                   }}
                   onMouseLeave={() => setTooltipAnchor(null)}
                   style={{
@@ -153,7 +158,7 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
         </div>
       ))}
 
-      {tooltipAnchor && (
+      {tooltipAnchor && createPortal(
         <div
           style={{
             position: 'fixed',
@@ -191,7 +196,8 @@ export default function VasGantt({ vases, windowStart, windowEnd }: Props) {
               </div>
             </div>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
