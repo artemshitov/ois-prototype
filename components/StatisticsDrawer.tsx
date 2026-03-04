@@ -13,10 +13,30 @@ import VasGantt from './VasGantt'
 import ChartTooltip, { type ActiveBar, type TooltipPos } from './ChartTooltip'
 import ReportTab from './ReportTab'
 
+function parseMarkdownInline(text: string): React.ReactNode[] {
+  const parts = text.split(/(\[[^\]]+\]\([^)]+\))/g)
+  return parts.map((part, i) => {
+    const m = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/)
+    if (m) return <a key={i} href={m[2]} target="_blank" rel="noopener noreferrer">{m[1]}</a>
+    return part
+  })
+}
+
 const ALL_ITEMS = [item1Data, item2Data, item3Data].map(d => parseItemData(d as unknown as RawItemData))
 
 const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'май', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек']
 const MONTHS_LONG  = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+const MONTHS_LONG_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+const DOW_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']
+
+function pluralDays(n: number): string {
+  const mod100 = n % 100
+  const mod10  = n % 10
+  if (mod100 >= 11 && mod100 <= 19) return `${n} дней`
+  if (mod10 === 1) return `${n} день`
+  if (mod10 >= 2 && mod10 <= 4) return `${n} дня`
+  return `${n} дней`
+}
 
 function parseLocalDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number)
@@ -28,6 +48,7 @@ interface HoverData {
   dayIdx: number
   barRect: DOMRect | null
   isTotalHover?: boolean
+  vasHover?: boolean
 }
 
 const DRAWER_WIDTH = 920
@@ -144,6 +165,32 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
       })()
     : null
 
+  const activeDateLabelLong = activeDayIdx !== null
+    ? (() => {
+        if (viewMode === 'weeks' && weekInfo) {
+          const w = weekInfo[activeDayIdx]
+          const s = parseLocalDate(parsedItem.startDates[w.dayIndices[0]])
+          const e = parseLocalDate(parsedItem.startDates[w.dayIndices[w.dayIndices.length - 1]])
+          const n = w.dayIndices.length
+          const range = s.getMonth() === e.getMonth()
+            ? `${s.getDate()} \u2014 ${e.getDate()} ${MONTHS_LONG_GEN[e.getMonth()]}`
+            : `${s.getDate()} ${MONTHS_LONG_GEN[s.getMonth()]} \u2014 ${e.getDate()} ${MONTHS_LONG_GEN[e.getMonth()]}`
+          return `${pluralDays(n)}: ${range}`
+        }
+        const dt = parseLocalDate(parsedItem.startDates[activeDayIdx])
+        return `${dt.getDate()} ${MONTHS_LONG_GEN[dt.getMonth()]}`
+      })()
+    : null
+
+  const tooltipDateLabel = hoverData && !hoverData.isTotalHover
+    ? viewMode === 'weeks' && weekInfo
+      ? activeDateLabelLong ?? ''
+      : (() => {
+          const dt = parseLocalDate(parsedItem.startDates[hoverData.dayIdx])
+          return `${dt.getDate()} ${MONTHS_LONG_GEN[dt.getMonth()]}, ${DOW_SHORT[dt.getDay()]}`
+        })()
+    : undefined
+
   const totals = parsedItem.totals
   const d = activeDayIdx !== null ? displayData[activeDayIdx] : null
   const imp      = d?.impressions ?? totals.imp
@@ -165,8 +212,8 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
       name: 'Просмотры',
       metricValue: formatNum(views),
       details: [
-        ...(imp > 0 && views > 0 ? [{ icon: 'percent' as const, value: `${formatNum(views / imp * 100, 1)}%`, tooltip: '% показов' }] : []),
-        ...(views > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / views, 2)}\u00a0₽`, tooltip: '₽ за просмотр' }] : []),
+        ...(imp > 0 && views > 0 ? [{ icon: 'percent' as const, value: `${formatNum(views / imp * 100, 1)}%`, tooltip: 'Конверсия из показа в просмотр' }] : []),
+        ...(views > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / views, 2)}\u00a0₽`, tooltip: 'Цена просмотра' }] : []),
       ],
       dynamic: dyn.views,
     },
@@ -174,8 +221,8 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
       name: 'Контакты',
       metricValue: formatNum(contacts),
       details: [
-        ...(views > 0 && contacts > 0 ? [{ icon: 'percent' as const, value: `${formatNum(contacts / views * 100, 1)}%`, tooltip: '% просмотров' }] : []),
-        ...(contacts > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / contacts, 2)}\u00a0₽`, tooltip: '₽ за контакт' }] : []),
+        ...(views > 0 && contacts > 0 ? [{ icon: 'percent' as const, value: `${formatNum(contacts / views * 100, 1)}%`, tooltip: 'Конверсия из просмотра в контакт' }] : []),
+        ...(contacts > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / contacts, 2)}\u00a0₽`, tooltip: 'Цена контакта' }] : []),
       ],
       dynamic: dyn.contacts,
     },
@@ -186,7 +233,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
       dynamic: dyn.spending,
     },
   ]
-  const activeBar: ActiveBar | null = hoverData
+  const activeBar: ActiveBar | null = hoverData && !hoverData.vasHover
     ? { cfg: hoverData.cfg, dayIdx: hoverData.dayIdx }
     : null
 
@@ -209,12 +256,30 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
     if (!el) return
     const rect = el.getBoundingClientRect()
     const x = e.clientX - rect.left
-    if (x < 0 || x >= rect.width) return
+    if (x < 0 || x >= rect.width) {
+      handleMouseLeave()
+      return
+    }
     const idx = Math.min(columnCount - 1, Math.floor(x / (rect.width / columnCount)))
     setHoverData(prev => {
       if (prev?.dayIdx === idx) return prev
       lastActiveRef.current = { dayIdx: idx, chartId: 'col' }
       return { cfg: prev?.cfg ?? charts[0], dayIdx: idx, barRect: prev?.barRect ?? null }
+    })
+  }, [charts, columnCount, handleMouseLeave])
+
+  const handleVasMouseMove = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    const el = barsRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    if (x < 0 || x >= rect.width) return
+    const idx = Math.min(columnCount - 1, Math.floor(x / (rect.width / columnCount)))
+    setHoverData(prev => {
+      if (prev?.dayIdx === idx && prev?.vasHover) return prev
+      lastActiveRef.current = { dayIdx: idx, chartId: 'vas' }
+      return { cfg: prev?.cfg ?? charts[0], dayIdx: idx, barRect: null, vasHover: true }
     })
   }, [charts, columnCount])
 
@@ -345,6 +410,34 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
             </div>
           </div>
 
+          {listing.status === 'rejected' && listing.rejectionReason && (
+            listing.bannerStyle === 'heading' ? (
+              <div className="rejection-banner rejection-banner--heading">
+                <div className="rejection-banner-heading">Объявление не опубликовано</div>
+                <div className="rejection-reason-content">
+                  <div className="rejection-reason-title">{listing.rejectionReason.title}</div>
+                  <div className="rejection-reason-body">
+                    {listing.rejectionReason.body.split('\n\n').map((para, i) => (
+                      <p key={i}>{parseMarkdownInline(para)}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="rejection-banner">
+                <div className="rejection-badge">Объявление не опубликовано</div>
+                <div className="rejection-reason-content">
+                  <div className="rejection-reason-title">{listing.rejectionReason.title}</div>
+                  <div className="rejection-reason-body">
+                    {listing.rejectionReason.body.split('\n\n').map((para, i) => (
+                      <p key={i}>{parseMarkdownInline(para)}</p>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )
+          )}
+
           <div className="tab-group">
             {tabs.map(tab => (
               <Link
@@ -366,6 +459,18 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
           {activeTab === 'statistics' && (
             <>
               <div className="filters">
+                <span className="filters-label">{activeDateLabelLong ?? (() => {
+                  const s = parseLocalDate(parsedItem.startDates[0])
+                  const e = parseLocalDate(parsedItem.startDates[parsedItem.startDates.length - 1])
+                  const n = parsedItem.startDates.length
+                  const range = `${s.getDate()} ${MONTHS_LONG_GEN[s.getMonth()]} \u2014 ${e.getDate()} ${MONTHS_LONG_GEN[e.getMonth()]}`
+                  return n > 1 ? `${pluralDays(n)}: ${range}` : range
+                })()}</span>
+                <div style={{ flex: 1 }} />
+                <div className="segmented-control">
+                  <button className={`segment${viewMode === 'days' ? ' active' : ''}`} onClick={() => setViewMode('days')}>По дням</button>
+                  <button className={`segment${viewMode === 'weeks' ? ' active' : ''}`} onClick={() => setViewMode('weeks')}>По неделям</button>
+                </div>
                 <button className="date-picker">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <rect x="3" y="4" width="14" height="13" rx="2" />
@@ -373,7 +478,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                     <line x1="7" y1="2" x2="7" y2="5" />
                     <line x1="13" y1="2" x2="13" y2="5" />
                   </svg>
-                  <span>{activeDateLabel ?? (() => {
+                  <span>{(() => {
                     const s = parseLocalDate(parsedItem.startDates[0])
                     const e = parseLocalDate(parsedItem.startDates[parsedItem.startDates.length - 1])
                     return `${s.getDate()} ${MONTHS_SHORT[s.getMonth()]} \u2014 ${e.getDate()} ${MONTHS_SHORT[e.getMonth()]}`
@@ -382,10 +487,6 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                     <polyline points="3,4.5 6,7.5 9,4.5" />
                   </svg>
                 </button>
-                <div className="segmented-control">
-                  <button className={`segment${viewMode === 'days' ? ' active' : ''}`} onClick={() => setViewMode('days')}>По дням</button>
-                  <button className={`segment${viewMode === 'weeks' ? ' active' : ''}`} onClick={() => setViewMode('weeks')}>По неделям</button>
-                </div>
               </div>
 
               <div onMouseLeave={handleMouseLeave} onMouseMove={handleColumnMouseMove} style={{ cursor: 'pointer' }}>
@@ -424,7 +525,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                           <span className="metric-number">{section.metricValue}</span>
                           {section.dynamic && (
                             <span className="metric-dynamic" style={{ color: section.name === 'Расходы' ? '#757575' : section.dynamic.color }}>
-                              {section.dynamic.icon === 'up' ? '↑' : '↓'}{section.dynamic.title}
+                              {section.dynamic.icon === 'up' ? '↑' : '↓'}{parseFloat(section.dynamic.title.replace(/\s/g, '').replace(',', '.')) > 99 ? '99%+' : section.dynamic.title}
                             </span>
                           )}
                         </div>
@@ -454,6 +555,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                         onBarHover={handleBarHover}
                         yTopLabel={chartYLabels[idx]}
                         barsRef={idx === 0 ? barsRef : undefined}
+                        chartKey={viewMode}
                       />
                     </div>
                   </div>
@@ -461,7 +563,11 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
 
                 {/* VAS + date scale */}
                 <div className="sticky-bottom-block">
-                  <div style={{ marginLeft: 217, width: 603, paddingTop: 2 }}>
+                  <div
+                    style={{ marginLeft: 217, width: 603, paddingTop: 2 }}
+                    onMouseMove={handleVasMouseMove}
+                    onMouseLeave={handleMouseLeave}
+                  >
                     <VasGantt vases={parsedItem.vases} windowStart={vasWindowStart} windowEnd={vasWindowEnd} />
                   </div>
 
@@ -561,6 +667,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
         tooltipPos={tooltipPos}
         boxRef={tooltipBoxRef}
         width={activeBar && ['shows', 'views', 'shows-total', 'views-total'].includes(activeBar.cfg.id) ? 290 : 340}
+        dateLabel={tooltipDateLabel}
       />
     </>
   )

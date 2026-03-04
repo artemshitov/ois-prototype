@@ -59,9 +59,79 @@ button, input, select, textarea {
   padding: 0 40px 0 40px;
 }
 
+/* Rejection banner */
+.rejection-banner {
+  margin: 0 0 20px;
+  padding: 20px;
+  background: #ffe0e0;
+  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rejection-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #ff4053;
+  border-radius: 48px;
+  padding: 3px 8px 5px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  color: #fff;
+  white-space: nowrap;
+  align-self: flex-start;
+}
+.rejection-reason-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rejection-reason-title {
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 18px;
+  color: #000;
+}
+.rejection-reason-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rejection-reason-body p {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 18px;
+  color: #000;
+}
+.rejection-reason-body a {
+  color: #000;
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+}
+
+/* Rejection banner — heading variant */
+.rejection-banner--heading {
+  padding: 20px 28px 28px 24px;
+}
+.rejection-banner--heading .rejection-banner-heading {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 26px;
+  color: #000;
+}
+.rejection-banner--heading .rejection-reason-content .rejection-reason-title {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 16px;
+}
+
 /* Tab group */
 .tab-group {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #fff;
   display: flex;
   align-items: flex-end;
   margin-bottom: 24px;
@@ -105,6 +175,13 @@ button, input, select, textarea {
   gap: 6px;
   margin-bottom: 32px;
 }
+.filters-label {
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 26px;
+  color: #000;
+  white-space: nowrap;
+}
 
 .date-picker {
   position: relative;
@@ -112,7 +189,7 @@ button, input, select, textarea {
   align-items: center;
   gap: 6px;
   padding: 11px 40px 13px 16px; /* 40px right leaves room for absolute chevron */
-  width: 232px;
+  width: 200px;
   background: #f2f1f0;
   border-radius: 12px;
   border: none;
@@ -143,24 +220,25 @@ button, input, select, textarea {
 
 .segmented-control {
   display: flex;
-  gap: 6px;
+  background: #f2f1f0;
+  border-radius: 12px;
+  padding: 4px;
 }
 .segment {
-  height: 44px;
-  padding: 11px 17px 13px;
-  border-radius: 12px;
+  padding: 7px 11px 9px;
+  border-radius: 8px;
   font-size: 15px;
   font-weight: 500;
   line-height: 20px;
   color: #000;
   border: none;
   cursor: pointer;
-  background: #f2f1f0;
+  background: transparent;
   white-space: nowrap;
 }
 .segment.active {
-  background: #141414;
-  color: #fff;
+  background: #fff;
+  box-shadow: 0px 1px 3px rgba(0,0,0,0.05), 0px 4px 30px rgba(0,0,0,0.12);
 }
 
 /* Chart sections */
@@ -240,7 +318,7 @@ button, input, select, textarea {
 .metric-detail[data-tooltip]:hover::after {
   content: attr(data-tooltip);
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
   background: #000;
@@ -255,6 +333,10 @@ button, input, select, textarea {
   box-shadow: 0px 1px 3px rgba(0,0,0,0.05), 0px 4px 30px rgba(0,0,0,0.12);
   pointer-events: none;
   z-index: 100;
+}
+.metric-detail:first-child[data-tooltip]:hover::after {
+  left: 0;
+  transform: none;
 }
 
 /* Chart area */
@@ -301,13 +383,19 @@ button, input, select, textarea {
   cursor: pointer;
   transition: opacity 0.1s;
 }
+@keyframes barScaleUp {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
 .bar-fill {
   display: flex;
   flex-direction: column;
   border-radius: 6px;
   overflow: hidden;
   background: #E3E2E1;
+  transform-origin: bottom center;
   transition: height 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  animation: barScaleUp 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 .bar-segment {
   width: 100%;
@@ -412,9 +500,9 @@ button, input, select, textarea {
   justify-content: space-between;
 }
 .widget-name {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 18px;
 }
 .widget-arrow {
   width: 20px;
@@ -571,7 +659,7 @@ button, input, select, textarea {
   background: #fff;
   border-radius: 20px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.08);
-  padding: 16px 20px 20px;
+  padding: 16px 20px;
 }
 .tooltip-header {
   display: flex;
@@ -580,7 +668,7 @@ button, input, select, textarea {
   margin-bottom: 8px;
 }
 .tooltip-date {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 20px;
 }
@@ -597,6 +685,9 @@ button, input, select, textarea {
   display: flex;
   align-items: flex-start;
   min-height: 24px;
+}
+.tooltip-row:last-child {
+  min-height: unset;
 }
 .tooltip-dot {
   width: 12px;
