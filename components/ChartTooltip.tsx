@@ -18,11 +18,11 @@ interface ChartTooltipProps {
   tooltipPos: TooltipPos | null
   boxRef: RefObject<HTMLDivElement | null>
   width?: number
+  dateLabel?: string
 }
 
-export default function ChartTooltip({ activeBar, tooltipPos, boxRef, width = 340 }: ChartTooltipProps) {
+export default function ChartTooltip({ activeBar, tooltipPos, boxRef, width = 340, dateLabel }: ChartTooltipProps) {
   if (!activeBar) return null
-  if (activeBar.cfg.keys.length <= 1) return null
 
   const { cfg, dayIdx } = activeBar
   const data = cfg.data[dayIdx]
@@ -47,6 +47,11 @@ export default function ChartTooltip({ activeBar, tooltipPos, boxRef, width = 34
   return (
     <div style={wrapperStyle}>
       <div className="tooltip-box" ref={boxRef} style={{ width }}>
+        {dateLabel && (
+          <div className="tooltip-header">
+            <span className="tooltip-date">{dateLabel}</span>
+          </div>
+        )}
         <div className="tooltip-rows">
           {rows.map(({ k, val, label }) => (
             <div key={k} className="tooltip-row">

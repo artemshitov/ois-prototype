@@ -9,6 +9,7 @@ interface BarChartProps {
   yTopLabel: string
   yBottomLabel?: string
   barsRef?: React.RefObject<HTMLDivElement | null>
+  chartKey?: string
 }
 
 export default function BarChart({
@@ -18,6 +19,7 @@ export default function BarChart({
   yTopLabel,
   yBottomLabel = '0',
   barsRef,
+  chartKey,
 }: BarChartProps) {
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const bar = (e.target as HTMLElement).closest<HTMLElement>('.bar')
@@ -40,11 +42,11 @@ export default function BarChart({
         >
           {cfg.data.map((item, i) => (
             <div
-              key={i}
+              key={chartKey !== undefined ? `${chartKey}-${i}` : i}
               className={`bar${activeDayIdx === i ? ' day-highlighted' : ''}`}
               data-index={i}
             >
-              <div className="bar-fill" style={{ height: Math.max(item.h, 2), transitionDelay: `${i * 7}ms` }}>
+              <div className="bar-fill" style={{ height: Math.max(item.h, 2), transitionDelay: `${i * 7}ms`, animationDelay: `${i * 7}ms` }}>
                 {cfg.keys.map(k => {
                   const flex = (item as Record<string, number>)[k] || 0
                   if (flex <= 0) return null
