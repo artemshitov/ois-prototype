@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Manrope } from 'next/font/google'
 import './globals.css'
+import DrawerShell from '@/components/DrawerShell'
 
 const manrope = Manrope({
   subsets: ['latin', 'cyrillic'],
@@ -19,7 +20,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="ru">
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <head><script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script></head>
-      <body className={manrope.className}>{children}</body>
+      <body className={manrope.className}>
+        <DrawerShell />
+        {children}
+      </body>
     </html>
   )
 }
