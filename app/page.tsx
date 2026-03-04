@@ -1,5 +1,5 @@
-import StatisticsDrawer from '@/components/StatisticsDrawer'
+import { redirect } from 'next/navigation'
 
 export default function Home() {
-  return <StatisticsDrawer />
+  redirect('/item1')
 }
