@@ -183,7 +183,7 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 3px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .metric-name-text {
   font-size: 13px;
@@ -201,7 +201,7 @@ button, input, select, textarea {
   flex-wrap: wrap;
   align-items: baseline;
   gap: 2px 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .metric-number {
   font-size: 20px;
@@ -216,14 +216,45 @@ button, input, select, textarea {
 }
 .metric-details {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  gap: 0;
 }
 .metric-detail {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100px;
   font-size: 13px;
   font-weight: 500;
   line-height: 16px;
   color: #757575;
+  position: relative;
+  cursor: default;
+}
+.metric-detail:first-child {
+  width: 60px;
+}
+.metric-detail svg {
+  flex-shrink: 0;
+}
+.metric-detail[data-tooltip]:hover::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  padding: 9px 13px 9px 12px;
+  border-radius: 16px;
+  box-shadow: 0px 1px 3px rgba(0,0,0,0.05), 0px 4px 30px rgba(0,0,0,0.12);
+  pointer-events: none;
+  z-index: 100;
 }
 
 /* Chart area */
@@ -589,7 +620,8 @@ button, input, select, textarea {
 }
 .tooltip-dash-line {
   flex: 1;
-  border-bottom: 1px dashed #ccc;
+  height: 1px;
+  background: repeating-linear-gradient(to right, #ccc 0px, #ccc 1px, transparent 1px, transparent 3px);
   margin: 0 4px;
   min-width: 10px;
   align-self: flex-end;
@@ -1767,27 +1799,27 @@ button, input, select, textarea {
   display: flex;
   align-items: center;
   gap: 10px;
-  background: #f7f6f5;
-  border-radius: 14px;
-  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  padding: 10px 14px;
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.15s;
 }
 .rpt-hero-badge:hover {
-  background: #eeedeb;
+  background: rgba(255, 255, 255, 0.7);
 }
 .rpt-hero-badge-img {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
   background: linear-gradient(135deg, #f0e6ff, #ffe0ec);
   flex-shrink: 0;
 }
 .rpt-hero-badge-text {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
-  line-height: 18px;
+  line-height: 16px;
   color: #000;
   white-space: nowrap;
 }
@@ -1799,19 +1831,19 @@ button, input, select, textarea {
 /* ── Unified hero+funnel card ─────────────────────────────────────────── */
 
 .rpt-unified-card {
-  background: #f7f6f5;
-  border-radius: 14px;
+  background: #f5f4f2;
+  border-radius: 16px;
+  padding: 20px;
   margin-bottom: 28px;
-  overflow: hidden;
 }
 
-/* Zone A: score summary */
+/* Hero */
 .rpt-card-hero {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 20px;
-  padding: 20px 20px 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 .rpt-card-hero-left {
   display: flex;
@@ -1845,47 +1877,32 @@ button, input, select, textarea {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
-  padding-top: 4px;
+  padding-top: 6px;
 }
 .rpt-card-title {
   font-size: 18px;
   font-weight: 800;
   line-height: 22px;
-  color: #000;
+  color: #111;
 }
 .rpt-card-subtitle {
   font-size: 13px;
   font-weight: 500;
   line-height: 18px;
-  color: #757575;
+  color: #666;
 }
 
-/* Zone A divider */
-.rpt-card-sep {
-  height: 1px;
-  background: #ebeae8;
-  margin: 0 20px;
-}
-
-/* Zone B: funnel stages */
+/* Funnel stages */
 .rpt-card-funnel {
   display: flex;
-  align-items: stretch;
-  padding: 0;
+  align-items: flex-start;
+  padding: 4px 0 0;
 }
 .rpt-card-stage {
   flex: 1;
-  padding: 14px 16px;
-  border-left: 2px solid transparent;
   min-width: 0;
+  padding: 0 20px;
 }
-.rpt-card-stage:first-child {
-  border-left: none;
-  padding-left: 20px;
-}
-.rpt-card-stage-good     { border-left-color: #00b253; }
-.rpt-card-stage-warning  { border-left-color: #FF8C00; }
-.rpt-card-stage-critical { border-left-color: #FF4053; }
 .rpt-card-stage-num {
   font-size: 22px;
   font-weight: 800;
@@ -1897,32 +1914,59 @@ button, input, select, textarea {
   font-size: 13px;
   font-weight: 500;
   line-height: 16px;
-  color: #757575;
+  color: #666;
   margin-top: 2px;
 }
-.rpt-card-stage-badge {
-  margin-top: 6px;
+.rpt-card-stage-status {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+.rpt-card-stage-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.rpt-card-stage-dot-good     { background: #00b253; }
+.rpt-card-stage-dot-warning  { background: #FF8C00; }
+.rpt-card-stage-dot-critical { background: #FF4053; }
+.rpt-card-stage-status-text {
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 14px;
+  color: #777;
 }
 
-/* Conversion arrow between stages */
-.rpt-card-arrow {
+/* Conversion connector between stages */
+.rpt-card-connector {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  padding: 0 2px;
+  gap: 3px;
+  padding-top: 3px;
   flex-shrink: 0;
-  color: #c2c1be;
 }
-.rpt-card-arrow-warn {
-  color: #FF4053;
-}
-.rpt-card-arrow-rate {
-  font-size: 11px;
-  font-weight: 500;
-  line-height: 13px;
+.rpt-card-connector-rate {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 16px;
+  color: #666;
   white-space: nowrap;
+}
+.rpt-card-connector svg {
+  color: #999;
+}
+/* Bottleneck: red pill — unmissable */
+.rpt-card-connector-warn .rpt-card-connector-rate {
+  background: #FF4053;
+  color: #fff;
+  padding: 2px 9px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.rpt-card-connector-warn svg {
+  display: none;
 }
 
 /* ── Badge ─────────────────────────────────────────────────────────────── */
