@@ -17,9 +17,10 @@ interface ChartTooltipProps {
   activeBar: ActiveBar | null
   tooltipPos: TooltipPos | null
   boxRef: RefObject<HTMLDivElement | null>
+  width?: number
 }
 
-export default function ChartTooltip({ activeBar, tooltipPos, boxRef }: ChartTooltipProps) {
+export default function ChartTooltip({ activeBar, tooltipPos, boxRef, width = 340 }: ChartTooltipProps) {
   if (!activeBar) return null
   if (activeBar.cfg.keys.length <= 1) return null
 
@@ -45,7 +46,7 @@ export default function ChartTooltip({ activeBar, tooltipPos, boxRef }: ChartToo
 
   return (
     <div style={wrapperStyle}>
-      <div className="tooltip-box" ref={boxRef}>
+      <div className="tooltip-box" ref={boxRef} style={{ width }}>
         <div className="tooltip-rows">
           {rows.map(({ k, val, label }) => (
             <div key={k} className="tooltip-row">

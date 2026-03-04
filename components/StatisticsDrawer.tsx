@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useRef, useLayoutEffect, useCallback, useMemo, useEffect } from 'react'
-import { buildCharts, aggregateWeekly, parseItemData, type ChartConfig, type WeekInfo, type RawItemData, type DynamicInfo } from '@/lib/data'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { buildCharts, aggregateWeekly, parseItemData, type ChartConfig, type SegmentKey, type WeekInfo, type RawItemData, type DynamicInfo } from '@/lib/data'
 import { formatNum } from '@/lib/utils'
 import item1Data from '@/lib/item_stats/item1.json'
 import item2Data from '@/lib/item_stats/item2.json'
@@ -9,6 +11,7 @@ import item3Data from '@/lib/item_stats/item3.json'
 import BarChart from './BarChart'
 import VasGantt from './VasGantt'
 import ChartTooltip, { type ActiveBar, type TooltipPos } from './ChartTooltip'
+import ReportTab from './ReportTab'
 
 const ALL_ITEMS = [item1Data, item2Data, item3Data].map(d => parseItemData(d as unknown as RawItemData))
 
@@ -24,23 +27,34 @@ interface HoverData {
   cfg: ChartConfig
   dayIdx: number
   barRect: DOMRect | null
+  isTotalHover?: boolean
 }
 
 const DRAWER_WIDTH = 920
 
-export default function StatisticsDrawer() {
+const ITEM_IDS = ['item1', 'item2', 'item3']
+
+const TAB_DEFS = [
+  { id: 'main', label: 'Главное' },
+  { id: 'statistics', label: 'Статистика' },
+  { id: 'search-position', label: 'Место в поиске' },
+  { id: 'competitors', label: 'Конкуренты' },
+]
+
+export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: { activeTab?: string; id?: string }) {
+  const router = useRouter()
   const tooltipBoxRef = useRef<HTMLDivElement>(null)
   const chartsWrapperRef = useRef<HTMLDivElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
   const lastActiveRef = useRef<{ dayIdx: number; chartId: string } | null>(null)
 
-  const [selectedIdx, setSelectedIdx] = useState(0)
+  const selectedIdx = Math.max(0, ITEM_IDS.indexOf(id))
+  const tabs = TAB_DEFS.map(t => ({ ...t, href: t.id === 'main' ? `/${id}` : `/${id}/${t.id}` }))
   const [hoverData, setHoverData] = useState<HoverData | null>(null)
   const [tooltipPos, setTooltipPos] = useState<TooltipPos | null>(null)
   const [overlayX, setOverlayX] = useState<{ left: number; width: number } | null>(null)
   const [idCopied, setIdCopied] = useState(false)
   const [viewMode, setViewMode] = useState<'days' | 'weeks'>('days')
-  const [activeTab, setActiveTab] = useState('statistics')
 
   const parsedItem = ALL_ITEMS[selectedIdx]
   const listing = parsedItem.listing
@@ -56,6 +70,56 @@ export default function StatisticsDrawer() {
   const charts = useMemo(() => buildCharts(displayData), [displayData])
   const chartYLabels = useMemo(() => charts.map(c => formatNum(c.yMax)), [charts])
 
+  const totalBreakdown = useMemo(() => ({
+    vasImpressions: displayData.reduce((s, d) => s + d.vasImpressions, 0),
+    vasViews: displayData.reduce((s, d) => s + d.vasViews, 0),
+    contactsShowPhone: displayData.reduce((s, d) => s + d.contactsShowPhone, 0),
+    contactsMessenger: displayData.reduce((s, d) => s + d.contactsMessenger, 0),
+    contactsShowPhoneAndMessenger: displayData.reduce((s, d) => s + d.contactsShowPhoneAndMessenger, 0),
+    contactsSbcDiscount: displayData.reduce((s, d) => s + d.contactsSbcDiscount, 0),
+  }), [displayData])
+
+  const totalCharts = useMemo((): ChartConfig[] => {
+    const norm = (v: number, max: number) => max > 0 ? Math.round(v / max * 100) : 0
+    const { imp, views, contacts, spending } = parsedItem.totals
+    const { vasImpressions, vasViews, contactsShowPhone, contactsMessenger, contactsShowPhoneAndMessenger, contactsSbcDiscount } = totalBreakdown
+    return [
+      {
+        id: 'shows-total', yMax: imp,
+        keys: ['g', 'b'] as SegmentKey[],
+        labels: { g: 'Показы с продвижением', b: 'Показы без продвижения' },
+        unit: '',
+        data: [{ h: 100, g: norm(vasImpressions, imp), b: norm(imp - vasImpressions, imp) }],
+      },
+      {
+        id: 'views-total', yMax: views,
+        keys: ['g', 'b'] as SegmentKey[],
+        labels: { g: 'Просмотры с продвижением', b: 'Просмотры без продвижения' },
+        unit: '',
+        data: [{ h: 100, g: norm(vasViews, views), b: norm(views - vasViews, views) }],
+      },
+      {
+        id: 'contacts-total', yMax: contacts,
+        keys: ['b', 'v', 'p', 't'] as SegmentKey[],
+        labels: {
+          b: 'Посмотрели телефон',
+          v: 'Написали в\u00a0чат',
+          p: 'Посмотрели телефон и\u00a0написали в\u00a0чат',
+          t: 'Откликнулись на\u00a0скидку в\u00a0чате',
+        },
+        unit: '',
+        data: [{ h: 100, g: 0, b: norm(contactsShowPhone, contacts), v: norm(contactsMessenger, contacts), p: norm(contactsShowPhoneAndMessenger, contacts), t: norm(contactsSbcDiscount, contacts) }],
+      },
+      {
+        id: 'expenses-total', yMax: spending,
+        keys: ['g'] as SegmentKey[],
+        labels: { g: 'Расходы' },
+        unit: '\u00a0₽',
+        data: [{ h: 100, g: 100, b: 0 }],
+      },
+    ]
+  }, [parsedItem.totals, totalBreakdown])
+
   useEffect(() => {
     lastActiveRef.current = null
     setHoverData(null)
@@ -63,7 +127,7 @@ export default function StatisticsDrawer() {
     setOverlayX(null)
   }, [selectedIdx, viewMode])
 
-  const activeDayIdx = hoverData?.dayIdx ?? null
+  const activeDayIdx = hoverData && !hoverData.isTotalHover ? hoverData.dayIdx : null
   const activeDateLabel = activeDayIdx !== null
     ? (() => {
         if (viewMode === 'weeks' && weekInfo) {
@@ -90,7 +154,7 @@ export default function StatisticsDrawer() {
   const vasWindowStart = new Date(parsedItem.startDates[0]).getTime() / 1000
   const vasWindowEnd   = new Date(parsedItem.startDates[parsedItem.startDates.length - 1]).getTime() / 1000 + 86400
   const dyn = activeDayIdx === null ? parsedItem.dynamics : { imp: null, views: null, contacts: null, spending: null }
-  const metricSections: Array<{ name: string; metricValue: string; details: string[]; dynamic: DynamicInfo | null }> = [
+  const metricSections: Array<{ name: string; metricValue: string; details: Array<{ icon: 'percent' | 'ruble'; value: string; tooltip: string }>; dynamic: DynamicInfo | null }> = [
     {
       name: 'Показы',
       metricValue: formatNum(imp),
@@ -101,8 +165,8 @@ export default function StatisticsDrawer() {
       name: 'Просмотры',
       metricValue: formatNum(views),
       details: [
-        ...(imp > 0 && views > 0 ? [`${formatNum(views / imp * 100, 1)}% показов`] : []),
-        ...(views > 0 ? [`${formatNum(spending / views, 2)}\u00a0₽ за просмотр`] : []),
+        ...(imp > 0 && views > 0 ? [{ icon: 'percent' as const, value: `${formatNum(views / imp * 100, 1)}%`, tooltip: '% показов' }] : []),
+        ...(views > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / views, 2)}\u00a0₽`, tooltip: '₽ за просмотр' }] : []),
       ],
       dynamic: dyn.views,
     },
@@ -110,8 +174,8 @@ export default function StatisticsDrawer() {
       name: 'Контакты',
       metricValue: formatNum(contacts),
       details: [
-        ...(views > 0 && contacts > 0 ? [`${formatNum(contacts / views * 100, 1)}% просмотров`] : []),
-        ...(contacts > 0 ? [`${formatNum(spending / contacts, 2)}\u00a0₽ за контакт`] : []),
+        ...(views > 0 && contacts > 0 ? [{ icon: 'percent' as const, value: `${formatNum(contacts / views * 100, 1)}%`, tooltip: '% просмотров' }] : []),
+        ...(contacts > 0 ? [{ icon: 'ruble' as const, value: `${formatNum(spending / contacts, 2)}\u00a0₽`, tooltip: '₽ за контакт' }] : []),
       ],
       dynamic: dyn.contacts,
     },
@@ -160,9 +224,9 @@ export default function StatisticsDrawer() {
       setOverlayX(null)
       return
     }
-    const { dayIdx, barRect } = hoverData
-    // Overlay computed from dayIdx + barsRef — works from any hover zone
-    if (barsRef.current && chartsWrapperRef.current) {
+    const { dayIdx, barRect, isTotalHover } = hoverData
+    // Overlay computed from dayIdx + barsRef — skip for total hover
+    if (!isTotalHover && barsRef.current && chartsWrapperRef.current) {
       const barsRect = barsRef.current.getBoundingClientRect()
       const wrapperRect = chartsWrapperRef.current.getBoundingClientRect()
       const slotW = barsRect.width / columnCount
@@ -170,6 +234,8 @@ export default function StatisticsDrawer() {
         left: barsRect.left - wrapperRect.left + dayIdx * slotW,
         width: slotW,
       })
+    } else if (isTotalHover) {
+      setOverlayX(null)
     }
     // Tooltip only when hovering a bar (barRect is non-null)
     if (!tooltipBoxRef.current || !barRect) {
@@ -179,7 +245,7 @@ export default function StatisticsDrawer() {
     const barCenterX = barRect.left + barRect.width / 2
     const barTopY = barRect.top
     const boxH = tooltipBoxRef.current.offsetHeight
-    const boxW = 440
+    const boxW = ['shows', 'views', 'shows-total', 'views-total'].includes(hoverData.cfg.id) ? 290 : 340
     const drawerLeft = window.innerWidth - DRAWER_WIDTH
     let left = barCenterX - boxW / 2
     left = Math.max(drawerLeft + 10, Math.min(window.innerWidth - boxW - 10, left))
@@ -201,15 +267,45 @@ export default function StatisticsDrawer() {
       <div className="drawer">
         <div className="drawer-content">
           <div className="footer">
-            <div className="product-info">
-              <div className="product-image">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={listing.imageUrl} alt={listing.title} style={{ objectFit: 'cover', width: '100%', height: '100%' }} />
+            <div className="snippet-left">
+              <div className="snippet-arrows">
+                <button
+                  className="snippet-arrow-btn"
+                  disabled={selectedIdx === 0}
+                  onClick={() => {
+                    const newId = ITEM_IDS[selectedIdx - 1]
+                    router.push(activeTab === 'main' ? `/${newId}` : `/${newId}/${activeTab}`)
+                  }}
+                  aria-label="Предыдущее объявление"
+                >
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 5L5 1L9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
+                <button
+                  className="snippet-arrow-btn"
+                  disabled={selectedIdx === ALL_ITEMS.length - 1}
+                  onClick={() => {
+                    const newId = ITEM_IDS[selectedIdx + 1]
+                    router.push(activeTab === 'main' ? `/${newId}` : `/${newId}/${activeTab}`)
+                  }}
+                  aria-label="Следующее объявление"
+                >
+                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </button>
               </div>
-              <div className="product-text">
-                <div className="product-price">{listing.price}</div>
-                <div className="product-title">{listing.title}</div>
-                <div className="product-location">{listing.location}</div>
+              <div className="snippet-image">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={listing.imageUrl} alt={listing.title} />
+              </div>
+              <div className="snippet-text">
+                <div className="snippet-info">
+                  <div className="snippet-title">{listing.title}</div>
+                  <div className="snippet-price">{listing.price}</div>
+                  <div className="snippet-location">{listing.location}</div>
+                </div>
                 <div
                   className={`product-id${idCopied ? ' copied' : ''}`}
                   onClick={() => {
@@ -243,222 +339,218 @@ export default function StatisticsDrawer() {
                 </div>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div className="listing-nav">
-                <button
-                  className="listing-nav-btn"
-                  disabled={selectedIdx === 0}
-                  onClick={() => setSelectedIdx(i => i - 1)}
-                  aria-label="Предыдущее объявление"
-                >
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="10,3 5,8 10,13"/></svg>
-                </button>
-                <span className="listing-nav-counter">{selectedIdx + 1}&nbsp;/&nbsp;{ALL_ITEMS.length}</span>
-                <button
-                  className="listing-nav-btn"
-                  disabled={selectedIdx === ALL_ITEMS.length - 1}
-                  onClick={() => setSelectedIdx(i => i + 1)}
-                  aria-label="Следующее объявление"
-                >
-                  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6,3 11,8 6,13"/></svg>
-                </button>
-              </div>
-              <div className="footer-buttons">
-                <button className="btn btn-secondary">Редактировать</button>
-                <button className="btn btn-primary">Продвинуть</button>
-              </div>
+            <div className="snippet-controls">
+              <button className="btn btn-primary btn-s">Поднять просмотры</button>
+              <button className="btn btn-secondary btn-s">Редактировать</button>
             </div>
           </div>
 
           <div className="tab-group">
-            {[
-              { id: 'main', label: 'Главное' },
-              { id: 'statistics', label: 'Статистика' },
-              { id: 'search-position', label: 'Место в поиске' },
-              { id: 'competitors', label: 'Конкуренты' },
-            ].map(tab => (
-              <button
+            {tabs.map(tab => (
+              <Link
                 key={tab.id}
+                href={tab.href}
                 className={`tab-group-tab${activeTab === tab.id ? ' active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
+                scroll={false}
               >
                 {tab.label}
-              </button>
+              </Link>
             ))}
           </div>
 
-          <div className="filters">
-            <button className="date-picker">
-              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <rect x="3" y="4" width="14" height="13" rx="2" />
-                <line x1="3" y1="9" x2="17" y2="9" />
-                <line x1="7" y1="2" x2="7" y2="5" />
-                <line x1="13" y1="2" x2="13" y2="5" />
-              </svg>
-              <span>{activeDateLabel ?? (() => {
-                const s = parseLocalDate(parsedItem.startDates[0])
-                const e = parseLocalDate(parsedItem.startDates[parsedItem.startDates.length - 1])
-                return `${s.getDate()} ${MONTHS_SHORT[s.getMonth()]} \u2014 ${e.getDate()} ${MONTHS_SHORT[e.getMonth()]}`
-              })()}</span>
-              <svg className="chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="3,4.5 6,7.5 9,4.5" />
-              </svg>
-            </button>
-            <div className="segmented-control">
-              <button className={`segment${viewMode === 'days' ? ' active' : ''}`} onClick={() => setViewMode('days')}>По дням</button>
-              <button className={`segment${viewMode === 'weeks' ? ' active' : ''}`} onClick={() => setViewMode('weeks')}>По неделям</button>
-            </div>
-          </div>
+          {activeTab === 'main' && (
+            <ReportTab />
+          )}
 
-          <div onMouseLeave={handleMouseLeave} onMouseMove={handleColumnMouseMove} style={{ cursor: 'pointer' }}>
-          <div className="charts-wrapper" ref={chartsWrapperRef}>
-            {overlayX && (
-              <div
-                className="charts-col-overlay"
-                style={{ left: overlayX.left, width: overlayX.width }}
-              />
-            )}
-            {metricSections.map((section, idx) => (
-              <div key={section.name} className="chart-section">
-                <div className="chart-row">
-                  <div className="metric-info">
-                    <div className="metric-name">
-                      <span className="metric-name-text">{section.name}</span>
-                      <svg width="8" height="16" viewBox="0 0 8 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <g clipPath="url(#chevron-clip)">
-                          <path fillRule="evenodd" clipRule="evenodd" d="M3.99996 9.9799L1.38407 7.79999L0.615845 8.72185L3.99996 11.5419L7.38407 8.72185L6.61584 7.79999L3.99996 9.9799Z" fill="black"/>
-                        </g>
-                        <defs>
-                          <clipPath id="chevron-clip">
-                            <rect width="8" height="16" fill="white"/>
-                          </clipPath>
-                        </defs>
-                      </svg>
+
+          {activeTab === 'statistics' && (
+            <>
+              <div className="filters">
+                <button className="date-picker">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <rect x="3" y="4" width="14" height="13" rx="2" />
+                    <line x1="3" y1="9" x2="17" y2="9" />
+                    <line x1="7" y1="2" x2="7" y2="5" />
+                    <line x1="13" y1="2" x2="13" y2="5" />
+                  </svg>
+                  <span>{activeDateLabel ?? (() => {
+                    const s = parseLocalDate(parsedItem.startDates[0])
+                    const e = parseLocalDate(parsedItem.startDates[parsedItem.startDates.length - 1])
+                    return `${s.getDate()} ${MONTHS_SHORT[s.getMonth()]} \u2014 ${e.getDate()} ${MONTHS_SHORT[e.getMonth()]}`
+                  })()}</span>
+                  <svg className="chevron" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="3,4.5 6,7.5 9,4.5" />
+                  </svg>
+                </button>
+                <div className="segmented-control">
+                  <button className={`segment${viewMode === 'days' ? ' active' : ''}`} onClick={() => setViewMode('days')}>По дням</button>
+                  <button className={`segment${viewMode === 'weeks' ? ' active' : ''}`} onClick={() => setViewMode('weeks')}>По неделям</button>
+                </div>
+              </div>
+
+              <div onMouseLeave={handleMouseLeave} onMouseMove={handleColumnMouseMove} style={{ cursor: 'pointer' }}>
+              <div className="charts-wrapper" ref={chartsWrapperRef}>
+                {overlayX && (
+                  <div
+                    className="charts-col-overlay"
+                    style={{ left: overlayX.left, width: overlayX.width }}
+                  />
+                )}
+                {metricSections.map((section, idx) => (
+                  <div key={section.name} className="chart-section">
+                    <div className="chart-row">
+                      <div className="metric-info">
+                        <div className="metric-name">
+                          <span className="metric-name-text">{section.name}</span>
+                          <svg width="8" height="16" viewBox="0 0 8 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <g clipPath="url(#chevron-clip)">
+                              <path fillRule="evenodd" clipRule="evenodd" d="M3.99996 9.9799L1.38407 7.79999L0.615845 8.72185L3.99996 11.5419L7.38407 8.72185L6.61584 7.79999L3.99996 9.9799Z" fill="black"/>
+                            </g>
+                            <defs>
+                              <clipPath id="chevron-clip">
+                                <rect width="8" height="16" fill="white"/>
+                              </clipPath>
+                            </defs>
+                          </svg>
+                        </div>
+                        <div
+                          className="metric-value-row"
+                          onMouseEnter={activeDayIdx === null && totalCharts[idx].keys.length > 1 ? (e) => {
+                            setHoverData({ cfg: totalCharts[idx], dayIdx: 0, barRect: e.currentTarget.getBoundingClientRect(), isTotalHover: true })
+                          } : undefined}
+                          onMouseLeave={activeDayIdx === null && totalCharts[idx].keys.length > 1 ? handleMouseLeave : undefined}
+                          style={activeDayIdx === null && totalCharts[idx].keys.length > 1 ? { cursor: 'default' } : undefined}
+                        >
+                          <span className="metric-number">{section.metricValue}</span>
+                          {section.dynamic && (
+                            <span className="metric-dynamic" style={{ color: section.name === 'Расходы' ? '#757575' : section.dynamic.color }}>
+                              {section.dynamic.icon === 'up' ? '↑' : '↓'}{section.dynamic.title}
+                            </span>
+                          )}
+                        </div>
+                        {section.details.length > 0 && (
+                          <div className="metric-details">
+                            {section.details.map(d => (
+                              <span key={d.icon} className="metric-detail" data-tooltip={d.tooltip}>
+                                {d.icon === 'percent' ? (
+                                  <svg width="10" height="16" viewBox="0 0 10 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M6 10.5L10 6.99997L10 4.5C10 4.22386 9.77614 4 9.5 4L0.5 4.00001C0.223858 4.00001 1.89661e-07 4.22386 9.48304e-08 4.50001L0 6.99997L4 10.5V14L6 15L6 10.5ZM1 6.5462L5 10.0462L9 6.54621V5L1 5.00001V6.5462Z" fill="#757575"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="12" height="16" viewBox="0 0 12 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path fillRule="evenodd" clipRule="evenodd" d="M12 8C12 11.3137 9.31371 14 6 14C2.68629 14 0 11.3137 0 8C0 4.68629 2.68629 2 6 2C9.31371 2 12 4.68629 12 8ZM11 8C11 10.7614 8.76142 13 6 13C3.23858 13 1 10.7614 1 8C1 5.23858 3.23858 3 6 3C8.76142 3 11 5.23858 11 8Z" fill="#757575"/>
+                                    <path d="M7.9456 10H6.6284V5H5.6284V5.91093C5.6284 6.34859 5.40781 6.55208 5.08908 6.55208H4.53819V7.55208H5.64235L5.6284 10H4.3112V11H7.9456V10Z" fill="#757575"/>
+                                  </svg>
+                                )}
+                                {d.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <BarChart
+                        cfg={charts[idx]}
+                        activeDayIdx={activeDayIdx}
+                        onBarHover={handleBarHover}
+                        yTopLabel={chartYLabels[idx]}
+                        barsRef={idx === 0 ? barsRef : undefined}
+                      />
                     </div>
-                    <div className="metric-value-row">
-                      <span className="metric-number">{section.metricValue}</span>
-                      {section.dynamic && (
-                        <span className="metric-dynamic" style={{ color: section.dynamic.color }}>
-                          {section.dynamic.icon === 'up' ? '↑' : '↓'}{section.dynamic.title}
-                        </span>
+                  </div>
+                ))}
+
+                {/* VAS + date scale */}
+                <div className="sticky-bottom-block">
+                  <div style={{ marginLeft: 217, width: 603, paddingTop: 2 }}>
+                    <VasGantt vases={parsedItem.vases} windowStart={vasWindowStart} windowEnd={vasWindowEnd} />
+                  </div>
+
+                  <div className="sticky-date-scale">
+                    <div className="date-scale">
+                      {viewMode === 'weeks' && weekInfo ? (
+                        weekInfo.map((w, i) => (
+                          <div
+                            key={i}
+                            className={`date-label visible${activeDayIdx === i ? ' day-active' : ''}`}
+                          >
+                            <span>{w.label}</span>
+                          </div>
+                        ))
+                      ) : (
+                        parsedItem.startDates.map((dateStr, i) => {
+                          const dt = parseLocalDate(dateStr)
+                          const dow = dt.getDay()
+                          const isWeekend = dow === 0 || dow === 6
+                          return (
+                            <div
+                              key={i}
+                              className={`date-label${isWeekend ? ' date-weekend' : ' visible'}${activeDayIdx === i ? ' day-active' : ''}`}
+                            >
+                              <span>{dt.getDate()}</span>
+                            </div>
+                          )
+                        })
                       )}
                     </div>
-                    {section.details.length > 0 && (
-                      <div className="metric-details">
-                        {section.details.map(d => (
-                          <span key={d} className="metric-detail">{d}</span>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const counts = new Map<number, number>()
+                      if (viewMode === 'weeks' && weekInfo) {
+                        for (const w of weekInfo) {
+                          const m = parseLocalDate(parsedItem.startDates[w.dayIndices[0]]).getMonth()
+                          counts.set(m, (counts.get(m) ?? 0) + 1)
+                        }
+                      } else {
+                        for (const dateStr of parsedItem.startDates) {
+                          const m = parseLocalDate(dateStr).getMonth()
+                          counts.set(m, (counts.get(m) ?? 0) + 1)
+                        }
+                      }
+                      return (
+                        <div className="month-labels">
+                          {[...counts.entries()].map(([m, count]) => (
+                            <span key={m} className="month-label" style={{ flex: count }}>{MONTHS_LONG[m]}</span>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </div>
-                  <BarChart
-                    cfg={charts[idx]}
-                    activeDayIdx={activeDayIdx}
-                    onBarHover={handleBarHover}
-                    yTopLabel={chartYLabels[idx]}
-                    barsRef={idx === 0 ? barsRef : undefined}
-                  />
                 </div>
               </div>
-            ))}
-          </div>
+              </div>
 
-          {/* VAS + date scale — sticky together above footer */}
-          <div className="sticky-bottom-block">
-            {/* VAS bars — no header */}
-            <div style={{ position: 'relative', marginLeft: 177, width: 643 }}>
-              <VasGantt vases={parsedItem.vases} windowStart={vasWindowStart} windowEnd={vasWindowEnd} />
-              {overlayX && (
-                <div
-                  className="date-scale-overlay"
-                  style={{ left: overlayX.left - 177, width: overlayX.width }}
-                />
-              )}
-            </div>
-
-            {/* Date scale */}
-            <div className="sticky-date-scale">
-              {overlayX && (
-                <div
-                  className="date-scale-overlay"
-                  style={{ left: overlayX.left - 177, width: overlayX.width }}
-                />
-              )}
-              <div className="date-scale">
-                {viewMode === 'weeks' && weekInfo ? (
-                  weekInfo.map((w, i) => (
-                    <div
-                      key={i}
-                      className={`date-label visible${activeDayIdx === i ? ' day-active' : ''}`}
-                    >
-                      <span>{w.label}</span>
+              {/* Widgets */}
+              <div className="widgets">
+                <div className="widget-card">
+                  <div className="widget-header">
+                    <span className="widget-name">Избранное</span>
+                    <svg className="widget-arrow" viewBox="0 0 20 20" fill="none" stroke="#757575" strokeWidth="2">
+                      <polyline points="8,5 13,10 8,15" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="metric-value-row">
+                      <span className="widget-value">{formatNum(parsedItem.favorites)}</span>
+                      <span className="widget-dynamic"></span>
                     </div>
-                  ))
-                ) : (
-                  parsedItem.startDates.map((dateStr, i) => {
-                    const dt = parseLocalDate(dateStr)
-                    const dow = dt.getDay()
-                    const isWeekend = dow === 0 || dow === 6
-                    return (
-                      <div
-                        key={i}
-                        className={`date-label${isWeekend ? ' date-weekend' : ' visible'}${activeDayIdx === i ? ' day-active' : ''}`}
-                      >
-                        <span>{dt.getDate()}</span>
-                      </div>
-                    )
-                  })
-                )}
-              </div>
-              {viewMode === 'days' && (() => {
-                const counts = new Map<number, number>()
-                for (const dateStr of parsedItem.startDates) {
-                  const m = parseLocalDate(dateStr).getMonth()
-                  counts.set(m, (counts.get(m) ?? 0) + 1)
-                }
-                return (
-                  <div className="month-labels">
-                    {[...counts.entries()].map(([m, count]) => (
-                      <span key={m} className="month-label" style={{ flex: count }}>{MONTHS_LONG[m]}</span>
-                    ))}
                   </div>
-                )
-              })()}
-            </div>
-          </div>
-          </div>
-
-          {/* Widgets */}
-          <div className="widgets">
-            <div className="widget-card">
-              <div className="widget-header">
-                <span className="widget-name">Избранное</span>
-                <svg className="widget-arrow" viewBox="0 0 20 20" fill="none" stroke="#757575" strokeWidth="2">
-                  <polyline points="8,5 13,10 8,15" />
-                </svg>
-              </div>
-              <div>
-                <div className="metric-value-row">
-                  <span className="widget-value">{formatNum(parsedItem.favorites)}</span>
-                  <span className="widget-dynamic"></span>
+                </div>
+                <div className="widget-card">
+                  <div className="widget-header">
+                    <span className="widget-name">Расходы</span>
+                    <svg className="widget-arrow" viewBox="0 0 20 20" fill="none" stroke="#757575" strokeWidth="2">
+                      <polyline points="8,5 13,10 8,15" />
+                    </svg>
+                  </div>
+                  <div>
+                    <div className="metric-value-row">
+                      <span className="widget-value">{formatNum(totals.spending, 2)}&nbsp;₽</span>
+                      <span className="widget-dynamic"></span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="widget-card">
-              <div className="widget-header">
-                <span className="widget-name">Расходы</span>
-                <svg className="widget-arrow" viewBox="0 0 20 20" fill="none" stroke="#757575" strokeWidth="2">
-                  <polyline points="8,5 13,10 8,15" />
-                </svg>
-              </div>
-              <div>
-                <div className="metric-value-row">
-                  <span className="widget-value">{formatNum(totals.spending, 2)}&nbsp;₽</span>
-                  <span className="widget-dynamic"></span>
-                </div>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
 
         </div>
       </div>
@@ -468,6 +560,7 @@ export default function StatisticsDrawer() {
         activeBar={activeBar}
         tooltipPos={tooltipPos}
         boxRef={tooltipBoxRef}
+        width={activeBar && ['shows', 'views', 'shows-total', 'views-total'].includes(activeBar.cfg.id) ? 290 : 340}
       />
     </>
   )
