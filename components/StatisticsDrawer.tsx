@@ -2,7 +2,7 @@
 
 import { useState, useRef, useLayoutEffect, useCallback, useMemo, useEffect } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { buildCharts, aggregateWeekly, parseItemData, type ChartConfig, type SegmentKey, type WeekInfo, type RawItemData, type DynamicInfo } from '@/lib/data'
 import { formatNum } from '@/lib/utils'
 import item1Data from '@/lib/item_stats/item1.json'
@@ -62,8 +62,11 @@ const TAB_DEFS = [
   { id: 'competitors', label: 'Конкуренты' },
 ]
 
-export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: { activeTab?: string; id?: string }) {
+export default function StatisticsDrawer({ id = 'item1' }: { id?: string }) {
   const router = useRouter()
+  const pathname = usePathname()
+  const segments = pathname.split('/').filter(Boolean)
+  const activeTab = segments.length >= 2 ? segments[1] : 'main'
   const tooltipBoxRef = useRef<HTMLDivElement>(null)
   const chartsWrapperRef = useRef<HTMLDivElement>(null)
   const barsRef = useRef<HTMLDivElement>(null)
@@ -343,7 +346,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                   }}
                   aria-label="Предыдущее объявление"
                 >
-                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="14" height="8" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1 5L5 1L9 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
@@ -356,7 +359,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                   }}
                   aria-label="Следующее объявление"
                 >
-                  <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <svg width="14" height="8" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
                     <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </button>
@@ -369,7 +372,15 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                 <div className="snippet-info">
                   <div className="snippet-title">{listing.title}</div>
                   <div className="snippet-price">{listing.price}</div>
-                  <div className="snippet-location">{listing.location}</div>
+                  <div className="snippet-location">
+                  <span>{listing.location}</span>
+                  {listing.metro && (
+                    <span className="snippet-metro">
+                      <span className="snippet-metro-dot" style={{ background: listing.metro.color }} />
+                      {listing.metro.name}
+                    </span>
+                  )}
+                </div>
                 </div>
                 <div
                   className={`product-id${idCopied ? ' copied' : ''}`}
@@ -404,10 +415,32 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                 </div>
               </div>
             </div>
-            <div className="snippet-controls">
-              <button className="btn btn-primary btn-s">Поднять просмотры</button>
-              <button className="btn btn-secondary btn-s">Редактировать</button>
-            </div>
+            {(() => {
+              const buttons = listing.buttons ?? []
+              const [first, ...rest] = buttons
+              const showMore = true
+              return (
+                <div className="snippet-controls">
+                  {first && (
+                    <button className={`btn btn-${first.variant}`} style={{ width: '100%' }}>{first.label}</button>
+                  )}
+                  {(rest.length > 0 || showMore) && (
+                    <div className="snippet-controls-row">
+                      {rest.map((btn, i) => (
+                        <button key={btn.label} className={`btn btn-${btn.variant}`} style={i === 0 ? { flex: 1 } : undefined}>{btn.label}</button>
+                      ))}
+                      {showMore && (
+                        <button className="btn btn-secondary btn-icon-square" aria-label="Ещё">
+                          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M14.1667 9.99674C14.1667 10.9134 14.9167 11.6634 15.8333 11.6634C16.75 11.6634 17.5 10.9134 17.5 9.99674C17.5 9.08008 16.75 8.33008 15.8333 8.33008C14.9167 8.33008 14.1667 9.08008 14.1667 9.99674ZM11.6667 9.99674C11.6667 9.08008 10.9167 8.33008 10 8.33008C9.08333 8.33008 8.33333 9.08008 8.33333 9.99674C8.33333 10.9134 9.08333 11.6634 10 11.6634C10.9167 11.6634 11.6667 10.9134 11.6667 9.99674ZM4.16667 8.33008C5.08333 8.33008 5.83333 9.08008 5.83333 9.99674C5.83333 10.9134 5.08333 11.6634 4.16667 11.6634C3.25 11.6634 2.5 10.9134 2.5 9.99674C2.5 9.08008 3.25 8.33008 4.16667 8.33008Z" fill="black"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })()}
           </div>
 
           {listing.status === 'rejected' && listing.rejectionReason && (
@@ -564,7 +597,7 @@ export default function StatisticsDrawer({ activeTab = 'main', id = 'item1' }: {
                 {/* VAS + date scale */}
                 <div className="sticky-bottom-block">
                   <div
-                    style={{ marginLeft: 217, width: 603, paddingTop: 2 }}
+                    style={{ marginLeft: 213, paddingTop: 2 }}
                     onMouseMove={handleVasMouseMove}
                     onMouseLeave={handleMouseLeave}
                   >

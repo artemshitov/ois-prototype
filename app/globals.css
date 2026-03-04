@@ -50,9 +50,8 @@ button, input, select, textarea {
   overflow-x: hidden;
   z-index: 101;
 }
-.drawer::-webkit-scrollbar { width: 8px; }
-.drawer::-webkit-scrollbar-track { background: transparent; }
-.drawer::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
+.drawer { scrollbar-width: none; }
+.drawer::-webkit-scrollbar { display: none; }
 
 /* Content */
 .drawer-content {
@@ -189,7 +188,7 @@ button, input, select, textarea {
   align-items: center;
   gap: 6px;
   padding: 11px 40px 13px 16px; /* 40px right leaves room for absolute chevron */
-  width: 200px;
+  width: 201px;
   background: #f2f1f0;
   border-radius: 12px;
   border: none;
@@ -249,19 +248,19 @@ button, input, select, textarea {
 .chart-row {
   display: flex;
   align-items: flex-start;
+  gap: 12px;
 }
 
 /* Metric info */
 .metric-info {
-  width: 177px;
-  padding-right: 24px;
+  width: 201px;
   flex-shrink: 0;
 }
 .metric-name {
   display: flex;
   align-items: center;
   gap: 3px;
-  margin-bottom: 2px;
+  margin-bottom: 8px;
 }
 .metric-name-text {
   font-size: 13px;
@@ -341,22 +340,27 @@ button, input, select, textarea {
 
 /* Chart area */
 .chart-area {
-  width: 643px;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
+  position: relative;
 }
 .chart-container {
   height: 86px;
   display: flex;
   align-items: flex-end;
+  position: relative;
 }
 .y-axis {
+  position: absolute;
+  right: 100%;
+  top: 0;
   width: 40px;
   height: 86px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  flex-shrink: 0;
   padding-right: 6px;
+  pointer-events: none;
 }
 .y-axis span {
   font-size: 11px;
@@ -371,7 +375,7 @@ button, input, select, textarea {
 .bars {
   display: flex;
   height: 86px;
-  width: 603px;
+  width: 100%;
   align-items: stretch;
 }
 .bar {
@@ -432,8 +436,7 @@ button, input, select, textarea {
 /* Date scale container */
 .sticky-date-scale {
   position: relative;
-  margin-left: 217px;
-  width: 603px;
+  margin-left: 213px;
   padding: 8px 0 12px;
 }
 
@@ -484,8 +487,8 @@ button, input, select, textarea {
   margin-bottom: 16px;
 }
 .widget-card {
-  flex: 1;
-  max-width: 196px;
+  width: 201px;
+  max-width: 201px;
   min-height: 118px;
   background: #f2f1f0;
   border-radius: 20px;
@@ -528,13 +531,15 @@ button, input, select, textarea {
   padding: 16px 0 20px;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  gap: 28px;
   margin-bottom: 8px;
 }
 .snippet-left {
   display: flex;
   align-items: center;
   gap: 20px;
+  flex: 1;
+  min-width: 0;
 }
 .snippet-arrows {
   display: flex;
@@ -543,8 +548,8 @@ button, input, select, textarea {
   flex-shrink: 0;
 }
 .snippet-arrow-btn {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   border: none;
   background: #f2f1f0;
@@ -553,14 +558,15 @@ button, input, select, textarea {
   align-items: center;
   justify-content: center;
   color: #000;
+  flex-shrink: 0;
 }
 .snippet-arrow-btn:disabled {
   opacity: 0.3;
   cursor: default;
 }
 .snippet-image {
-  width: 78px;
-  height: 78px;
+  width: 94px;
+  height: 94px;
   border-radius: 6px;
   background: #f2f1f0;
   overflow: hidden;
@@ -575,8 +581,8 @@ button, input, select, textarea {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex: 1;
   min-width: 0;
-  max-width: 340px;
 }
 .snippet-info {
   display: flex;
@@ -584,35 +590,72 @@ button, input, select, textarea {
   gap: 2px;
 }
 .snippet-title {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
-  line-height: 20px;
+  line-height: 22px;
   color: #000;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .snippet-price {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 20px;
   color: #000;
 }
 .snippet-location {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 20px;
   color: #000;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.snippet-metro {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.snippet-metro-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 .snippet-controls {
   display: flex;
+  flex-direction: column;
   gap: 6px;
+  flex-shrink: 0;
+  width: 201px;
+}
+.snippet-controls-row {
+  display: flex;
+  gap: 6px;
+}
+.btn-icon-square {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.btn-icon-square svg {
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
 }
 .product-id {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 16px;
+  line-height: 20px;
   color: #757575;
   display: inline-flex;
   align-items: center;
@@ -639,10 +682,11 @@ button, input, select, textarea {
   font-size: 15px;
   font-weight: 500;
   line-height: 20px;
-  padding: 12px 20px;
+  padding: 11px 20px 13px;
   border-radius: 12px;
   border: none;
   cursor: pointer;
+  height: 44px;
 }
 .btn-secondary { background: #f2f1f0; color: #000; }
 .btn-primary   { background: #141414; color: #fff; }
